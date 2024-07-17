@@ -2,33 +2,35 @@
 % Please edit documentation in R/kmeRs_statistics.R
 \name{kmeRs_statistics}
 \alias{kmeRs_statistics}
-\title{Calculate And Add Basic Statistics To The K-mers Similarity Matrix}
+\title{Calculate row and column statistics for a k-mer similarity matrix}
 \usage{
-kmeRs_statistics(kmeRs_similarity_matrix,
-  summary_statistics_only = FALSE)
+kmeRs_statistics(x, margin.only = FALSE, digits = 2)
 }
 \arguments{
-\item{kmeRs_similarity_matrix}{matrix calculated by \code{kmeRs_similarity_matrix} function}
+\item{x}{Similarity matrix computed by \code{kmeRs_similarity_matrix}}
 
-\item{summary_statistics_only}{when parameter is set to TRUE only the summarized table with
-statistics is returned}
+\item{margin.only}{Should only margin statistics be displayed? Defaults to \code{FALSE}}
+
+\item{digits}{rounding digits, defaults to 2}
 }
 \value{
 data.frame with results
 }
 \description{
 The \code{kmeRs_statistics} function calculates basic statistics and returns the similarity matrix
-with calculated results or summarized table with statistics only when summary_statistics_only
+with calculated results or summarized table with statistics only when margin.only
 is set to TRUE
 }
 \examples{
 # Simple BLOSUM62 similarity matrix for DNA nucleotides
-example  <- kmeRs_similarity_matrix(kmers_given = c("A", "T", "C", "G"), submat = "BLOSUM62")
-
+# Sample heptamers
+q0 <- c("GATTACA", "ACAGATT", "GAATTAC", "GAAATCT", "CTATAGA", "GTACATA", "AACGATT")
+# Compute similarity matrix 
+example <- kmeRs_similarity_matrix(q0, submat = "BLOSUM62")
 # Result as a full matrix
 kmeRs_statistics(example)
 
 # Result a summary statistics table
-kmeRs_statistics(example, summary_statistics_only = TRUE)
+kmeRs_statistics(example, margin.only = TRUE)
 
 }

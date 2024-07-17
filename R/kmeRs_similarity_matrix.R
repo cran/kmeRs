@@ -11,89 +11,105 @@
 #'
 #' @aliases kmeRs_similarity_matrix
 #'
-#' @param kmers_given vector with given k-mers
-#' @param compare_to this parameter can have 3 different states, when:
-#' '' - the \code{kmers_given} will be compared to each other, default value;
-#' ALL -  the \code{kmers_given} will be compared to all possible combinations given by k parameter e.g. N= 4^6 = 4096 combinations for 6-mers;
-#' 3rd option is to provide a list of k-mers which should be compared with the set given by the \code{kmers_given} parameter
-#' @param k length of k-mers to calculate similarity matrix, higher values may slow down the computer, default value is k=3
-#' @param alignment_type type of alignment, default is 'global', could be 'local' or 'global', where 'global' represents
-#' Needleman-Wunsch global alignment; 'local' represents Smith-Waterman local alignment.
-#' @param submat substitution matrix, default is 'BLOSUM62', but could be one of 'BLOSUM45', 'BLOSUM50', 'BLOSUM62', 'BLOSUM80',
-#' 'BLOSUM100', 'PAM30', 'PAM40', 'PAM70', 'PAM120', 'PAM250'
-#' @param save_to_file directory and file name; if value is declared the matrix will be saved to the given file name
+#' @param q query vector with given k-mers
+#' @param x kmers to search the query vector against. If unspecified, \code{q} will 
+#' be compared to either other k-mers within \code{q} (\code{compare.all = FALSE}),
+#' or all possible combinations specified by the parameter \code{k}
+#' @param k length of k-mers to calculate the similarity matrix for, defaults to 3; e.g. for DNA, N = 4^3 = 64 combinations if \code{k = 3};
+#' @param seq.type type of sequence in question, either 'DNA' or 'AA' (default);
+#' this will also modify \code{q} accordingly, if \code{q} is unspecified.
+#' @param compare.all if \code{TRUE}, the query vector will be compared to all
+#' possible combinations of k-mers (defaults to \code{FALSE})
+#' @param align.type type of alignment, either \code{global} or \code{local}.
+#' \code{global} uses Needleman-Wunsch global alignment to calculate scores, while
+#' \code{local} represents Smith-Waterman local alignment instead
+#' @param submat substitution matrix, default to 'BLOSUM62'; other choices are
+#' 'BLOSUM45', 'BLOSUM50', 'BLOSUM62', 'BLOSUM80', 'BLOSUM100', 'PAM30',
+#' 'PAM40', 'PAM70', 'PAM120' or 'PAM250'
+#' @param save_to_file if specified, the results will be saved to the path in
+#' comma-separated format (.CSV)
+#' @param ... other parameters, e.g. gap opening/extension penalties (\code{gapOpening},
+#' \code{gapExtension}), or DNA match/mismatch scores (\code{na.match}, \code{na.mismatch})
 #'
 #' @return similarity matrix is returned as a data.frame
 #'
 #' @examples
-#' # Display BLOSUM matrix used for calculation
-#'
-#' kmeRs_similarity_matrix(kmers_given = c("A", "T", "C", "G"), submat = "BLOSUM62")
-#'
-#' @importFrom rDNAse twoSeqSim
+#' # Simple BLOSUM62 similarity matrix for all amino acid nucleotides
+#' kmeRs_similarity_matrix(submat = "BLOSUM62")
+#' 
 #' @importFrom utils write.csv2
-#' @importFrom tcR generate.kmers
-#' @importFrom Biostrings score
-#'
+#' @importFrom BiocGenerics score
+#' 
 #' @export
-
-
- kmeRs_similarity_matrix <- function(kmers_given, compare_to = '', alignment_type = "global", k = 3, submat = "BLOSUM62", save_to_file = '' ){
-
-  # Avoid case-sensitive errors
-
-    kmers_given <- toupper(kmers_given)
-
-  # Compare to the same set by default
-
-    if (compare_to[1] == ''){
-
-      compare_to <- kmers_given
-
-    }
-
-  # If compare_to_all == TRUE - Generate all possible k-mers from DNA alphabet
-
-    if (compare_to[1] == 'ALL'){
-
-      compare_to <- tcR::generate.kmers(.k = k, .seq = '', .alphabet = c('A', 'C', 'G', 'T'))
-
-    }
-
-  ## -- Prepare matrix --
-
-    kmers_dist_matrix <- matrix(NA, ncol = length(kmers_given), nrow = length(compare_to))
-
-  # Set cols and rows names
-
-    kmers_dist_matrix <- data.frame(kmers_dist_matrix, row.names = compare_to)
-    colnames(kmers_dist_matrix) <- kmers_given
-
-
-  ## -- Calculate the distance matrix -- TO-DO: Optimise performance - parallel calculations, packages like doParallel and foreach
-
-    for (col in 1:length(kmers_dist_matrix[1, ])){
-
-      for (row in 1:length(kmers_dist_matrix[, 1])){
-
-        seqA <- colnames(kmers_dist_matrix)[col]
-        seqB <- rownames(kmers_dist_matrix)[row]
-
-        kmers_dist_matrix[row, col] <- Biostrings::score(rDNAse::twoSeqSim(seqA, seqB, type = "global", submat = submat))  # TO-DO: more precise method may be applied
-
-      }
-    }
-
-  # Save to the file if requested
-
-  if (save_to_file > ''){
-
-    utils::write.csv2(kmers_dist_matrix, save_to_file)
-
-  }
-
-  # Return matrix
-
-    return(kmers_dist_matrix)
-
+#' 
+kmeRs_similarity_matrix <- function(q = NULL, x = NULL,
+	align.type = "global", k = 3, seq.type = "AA",
+	submat = ifelse(
+		test = (match.arg(toupper(seq.type), c("DNA", "AA")) == "AA"),
+		yes = "BLOSUM62", no = NA),
+	compare.all = FALSE, save_to_file = NULL, ...) {
+	
+	# this version supports AA and DNA only
+	seq.type <- match.arg(toupper(seq.type), c("DNA", "AA"))
+	if (seq.type == "AA") {
+		seq.alpha <- unlist(strsplit("GALMFWKQESPVICYHRNDT", ""))
+	} else {
+		seq.alpha <- unlist(strsplit("ATCG", ""))
+		# should the extended nucleic/amino acid alphabets be included?
+		# not implemented in this version
+		#if (extended) {
+		#	seq.alpha <- unlist(strsplit("ATCGWSMKRYBDHVNZ", ""))
+		#}
+	}
+	
+	# rewriting the x parameters as follows
+	if (is.null(q)) {
+		# no kmers_specified -> set according to sequence type as originally intended
+		q <- seq.alpha
+	} else {
+		q <- toupper(q)
+	}
+	if (is.null(x)) {
+		# unspecified; compare to q if compare.all is left as default
+		if (compare.all) {
+			x <- kmeRs_generate_kmers(k, bases = seq.alpha)
+		} else {
+			x <- q
+		}
+	}
+			
+	# matrix initialization
+	kmers_dist_matrix <- matrix(NA, ncol = length(q), nrow = length(x))
+	kmers_dist_matrix <- data.frame(kmers_dist_matrix, row.names = x)
+    colnames(kmers_dist_matrix) <- q
+		
+	# Calculate the distance matrix
+	# column ops are vectorized in this version instead
+	for (i in 1:dim(kmers_dist_matrix)[1]) {
+		kmers_dist_matrix[i,] <- as.vector(sapply(q, function(col) {
+		  BiocGenerics::score(kmeRs_twoSeqSim(col, x[i], 
+				seq.type = seq.type, align.type = align.type, submat = submat, verbose = FALSE, ...))
+		}))
+	}
+    
+	# Save to the file if requested
+	if (!is.null(save_to_file)) {
+		utils::write.csv2(x = kmers_dist_matrix, file = save_to_file)
+	}
+	return(kmers_dist_matrix)
 }
+
+#' @title kmeRs generate kmers
+#' @param k times
+#' @param bases follow the kmeRs_similarity_matrix()
+#'
+kmeRs_generate_kmers <- function(k, bases) {
+  kmers.list <- ''
+  for (i in 1:k) {
+    kmers.list <- unlist(lapply(kmers.list, function (kmer) {
+      paste0(kmer, bases)
+    }))
+  }
+  return(kmers.list)
+}
+

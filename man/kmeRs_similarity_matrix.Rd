@@ -4,27 +4,47 @@
 \alias{kmeRs_similarity_matrix}
 \title{Pairwise Similarity Matrix}
 \usage{
-kmeRs_similarity_matrix(kmers_given, compare_to = "",
-  alignment_type = "global", k = 3, submat = "BLOSUM62",
-  save_to_file = "")
+kmeRs_similarity_matrix(
+  q = NULL,
+  x = NULL,
+  align.type = "global",
+  k = 3,
+  seq.type = "AA",
+  submat = ifelse(test = (match.arg(toupper(seq.type), c("DNA", "AA")) == "AA"), yes =
+    "BLOSUM62", no = NA),
+  compare.all = FALSE,
+  save_to_file = NULL,
+  ...
+)
 }
 \arguments{
-\item{kmers_given}{vector with given k-mers}
+\item{q}{query vector with given k-mers}
 
-\item{compare_to}{this parameter can have 3 different states, when:
-'' - the \code{kmers_given} will be compared to each other, default value;
-ALL -  the \code{kmers_given} will be compared to all possible combinations given by k parameter e.g. N= 4^6 = 4096 combinations for 6-mers;
-3rd option is to provide a list of k-mers which should be compared with the set given by the \code{kmers_given} parameter}
+\item{x}{kmers to search the query vector against. If unspecified, \code{q} will 
+be compared to either other k-mers within \code{q} (\code{compare.all = FALSE}),
+or all possible combinations specified by the parameter \code{k}}
 
-\item{alignment_type}{type of alignment, default is 'global', could be 'local' or 'global', where 'global' represents
-Needleman-Wunsch global alignment; 'local' represents Smith-Waterman local alignment.}
+\item{align.type}{type of alignment, either \code{global} or \code{local}.
+\code{global} uses Needleman-Wunsch global alignment to calculate scores, while
+\code{local} represents Smith-Waterman local alignment instead}
 
-\item{k}{length of k-mers to calculate similarity matrix, higher values may slow down the computer, default value is k=3}
+\item{k}{length of k-mers to calculate the similarity matrix for, defaults to 3; e.g. for DNA, N = 4^3 = 64 combinations if \code{k = 3};}
 
-\item{submat}{substitution matrix, default is 'BLOSUM62', but could be one of 'BLOSUM45', 'BLOSUM50', 'BLOSUM62', 'BLOSUM80',
-'BLOSUM100', 'PAM30', 'PAM40', 'PAM70', 'PAM120', 'PAM250'}
+\item{seq.type}{type of sequence in question, either 'DNA' or 'AA' (default);
+this will also modify \code{q} accordingly, if \code{q} is unspecified.}
 
-\item{save_to_file}{directory and file name; if value is declared the matrix will be saved to the given file name}
+\item{submat}{substitution matrix, default to 'BLOSUM62'; other choices are
+'BLOSUM45', 'BLOSUM50', 'BLOSUM62', 'BLOSUM80', 'BLOSUM100', 'PAM30',
+'PAM40', 'PAM70', 'PAM120' or 'PAM250'}
+
+\item{compare.all}{if \code{TRUE}, the query vector will be compared to all
+possible combinations of k-mers (defaults to \code{FALSE})}
+
+\item{save_to_file}{if specified, the results will be saved to the path in
+comma-separated format (.CSV)}
+
+\item{...}{other parameters, e.g. gap opening/extension penalties (\code{gapOpening},
+\code{gapExtension}), or DNA match/mismatch scores (\code{na.match}, \code{na.mismatch})}
 }
 \value{
 similarity matrix is returned as a data.frame
@@ -39,8 +59,7 @@ higher similarity score indicates more similar sequences for BLOSUM and opposite
 PAM matrix.
 }
 \examples{
-# Display BLOSUM matrix used for calculation
-
-kmeRs_similarity_matrix(kmers_given = c("A", "T", "C", "G"), submat = "BLOSUM62")
+# Simple BLOSUM62 similarity matrix for all amino acid nucleotides
+kmeRs_similarity_matrix(submat = "BLOSUM62")
 
 }
